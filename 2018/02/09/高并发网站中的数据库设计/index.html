@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="事物,数据库," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="耿瑞阳的博客" type="application/atom+xml" />
+
+
+
+
+
+
+<meta name="description" content="介绍数据库其实就是一个普通的计算机系统，为我们提供某种服务。我们对数据库功能的抽闲可以将数据库功能抽象成三个部分">
+<meta name="keywords" content="事物,数据库">
+<meta property="og:type" content="article">
+<meta property="og:title" content="高并发网站中的数据库设计">
+<meta property="og:url" content="https://Gengry.github.io/2018/02/09/高并发网站中的数据库设计/index.html">
+<meta property="og:site_name" content="耿瑞阳的博客">
+<meta property="og:description" content="介绍数据库其实就是一个普通的计算机系统，为我们提供某种服务。我们对数据库功能的抽闲可以将数据库功能抽象成三个部分">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://raw.githubusercontent.com/Gengry/blogImage/master/20180207/4.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/Gengry/blogImage/master/20180207/5.jpg">
+<meta property="og:updated_time" content="2018-03-26T06:22:37.399Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="高并发网站中的数据库设计">
+<meta name="twitter:description" content="介绍数据库其实就是一个普通的计算机系统，为我们提供某种服务。我们对数据库功能的抽闲可以将数据库功能抽象成三个部分">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/Gengry/blogImage/master/20180207/4.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://Gengry.github.io/2018/02/09/高并发网站中的数据库设计/"/>
+
+
+
+
+
+  <title>高并发网站中的数据库设计 | 耿瑞阳的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">耿瑞阳的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://Gengry.github.io/2018/02/09/高并发网站中的数据库设计/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Geng">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="耿瑞阳的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">高并发网站中的数据库设计</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-02-09T08:42:22+08:00">
+                2018-02-09
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/数据库/" itemprop="url" rel="index">
+                    <span itemprop="name">数据库</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>数据库其实就是一个普通的计算机系统，为我们提供某种服务。<br>我们对数据库功能的抽闲可以将数据库功能抽象成三个部分<br><a id="more"></a></p>
+<ul>
+<li>用户API</li>
+<li>关系代数和事物引擎</li>
+<li>K-V存储</li>
+</ul>
+<blockquote>
+<p>关系型数据库底层也是K-V模型的，但是他为我们提供了更高层的服务，这些服务牺牲了运算速度实现了原子性，一致性，隔离性。<br>但是有些时候我们需要效率，关系型数据库成了系统的瓶颈。我们需要把速度拿回来，所以一些K-V数据库就产生了，其实就是去掉了关系代数和事物引擎将K-V存储和关于K-V的API暴露给了用户,这就是Nosql，Nosql放弃了事物提高了速度。<br>但是人们发现最简单的K-V存储好像什么事情都干不了，需要我们处理的事情太多了，就产生了newSql，为我们处理了关系代数模型和事物引擎的一部分功能。</p>
+</blockquote>
+<h1 id="Key-Value存储"><a href="#Key-Value存储" class="headerlink" title="Key-Value存储"></a>Key-Value存储</h1><p>本质就是<code>映射</code>，按照key找value。  </p>
+<p>映射的关键特性 <a href="http://blog.sina.cn/dpool/blog/s/blog_693f08470101mccl.html" target="_blank" rel="noopener">扩展</a></p>
+<ul>
+<li>是否支持范围查找</li>
+<li>是否能够处理更新</li>
+<li>读写性能指标</li>
+<li>是否面向磁盘结构</li>
+<li>并行指标</li>
+<li>内存占用</li>
+<li>Etc…</li>
+</ul>
+<p>常见的数据结构</p>
+<ul>
+<li>排序数组</li>
+<li>排序链表</li>
+<li>跳表</li>
+<li>B tree</li>
+<li>LSM tree</li>
+<li>HashMap</li>
+<li>Fractal Tree</li>
+<li>Red-Black-tree</li>
+<li>COLA</li>
+<li>Etc…</li>
+</ul>
+<h1 id="关系代数"><a href="#关系代数" class="headerlink" title="关系代数"></a>关系代数</h1><p>primary key:id  user_id  name</p>
+<p>按照key找value， Primary Key:id 按照id查找其他数据。</p>
+<p>但是如果按照user_id查看记录，则需要遍历所有记录。效率为O(n)</p>
+<h2 id="二级索引"><a href="#二级索引" class="headerlink" title="二级索引"></a>二级索引</h2><p>二级索引就是同样也是个K-V映射表  key为user_id,value为主键id。<br>如果二级索引为Hash结构，效率就下降为0(1),如果是二分查找 Tree，效率为O(logN)<br>这样查询 先按user_id查找到id，在通过id查找到数据。  </p>
+<p>如果按照多条件查询 where user_id = 1 and name = ‘tom’<br>如果按照刚才的索引查找，但是如果user_id为1的记录有一万条，我们就需要遍历一万条记录。</p>
+<h2 id="组合索引"><a href="#组合索引" class="headerlink" title="组合索引"></a>组合索引</h2><p><a href="http://blog.sina.cn/dpool/blog/s/blog_693f08470101pwyy.html" target="_blank" rel="noopener">扩展阅读</a><br><a href="https://www.tuicool.com/articles/7FR3YjI" target="_blank" rel="noopener">扩展阅读</a><br>使用 user_id和name作为key，主键id作为value。</p>
+<h1 id="事物简介"><a href="#事物简介" class="headerlink" title="事物简介"></a>事物简介</h1><p>事物的核心是锁和并发</p>
+<ul>
+<li>优势：方便理解</li>
+<li>劣势：性能较低</li>
+</ul>
+<p>事物其实就是帮助程序员人脑来理解程序到底是怎么运转的。人脑永远是串行的。把一个逻辑整理成第一步，第二步，第三步…<br>但是这要的程序只能在单机单线程中执行。<br>而现实生活中很多事情都是有先后的，例如我们从bob账户中取钱，我们查询账户余额为100，但我们真的去做减的时候，bob账户中的钱已经被别人取走了。<br>人脑不能很好的理解并发的概念，所以就设计了一种模式，就是事物，让我们方便理解并发，但是降低了性能。</p>
+<blockquote>
+<p>容易理解的模型性能都不好，性能好的模型都不容易理解 – 这就是生活。</p>
+</blockquote>
+<h2 id="事物单元"><a href="#事物单元" class="headerlink" title="事物单元"></a>事物单元</h2><p>其实数据库的DDL操作都可以拆分成两个操作，insert 是先查询再插入，update 先查询再更新， delete 先查询再删除，只有select是一个查询操作。<br>每次查询的时候都把数据锁上，锁的概念：在线程上面维持一个对这个访问的独占权，其他线程不能再访问它了。<br>事物所覆盖的所有数据都会被这个线程独占。<br>但是如果都用这么重量级的锁，那性能就太低了，所以事物为我们提供了四种隔离界别</p>
+<ul>
+<li>未提交读</li>
+<li>提交读</li>
+<li>可重复读</li>
+<li>序列化</li>
+</ul>
+<p>这些也是单独的事物单元  </p>
+<ul>
+<li>商品要建立一个基于GMT_Modified的索引</li>
+<li>从数据库中读取一行记录</li>
+<li>向数据库中写入一行记录，同事更新这行记录的所有索引</li>
+<li>删除整张表</li>
+<li>Etc…</li>
+</ul>
+<p>一组事物单元，是顺序执行的，第一个事物单元结束后，第二个事物单元才开始执行。<br>如果两个事物单元没有任何关系的话，A事物操作bob账户，B事物操作tom账户，两个事物是可以并行的。<br>如果两个事物共享同一份数据，事物没有办法并行。</p>
+<h2 id="事物产生原因"><a href="#事物产生原因" class="headerlink" title="事物产生原因"></a>事物产生原因</h2><p><a href="http://www.imooc.com/learn/272" target="_blank" rel="noopener">扩展阅读</a></p>
+<h3 id="事物单元之间的Happen-before关系（数据的四种冲突）"><a href="#事物单元之间的Happen-before关系（数据的四种冲突）" class="headerlink" title="事物单元之间的Happen-before关系（数据的四种冲突）"></a>事物单元之间的Happen-before关系（数据的四种冲突）</h3><ul>
+<li>读写</li>
+<li>写度</li>
+<li>读读</li>
+<li>写写</li>
+</ul>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><ul>
+<li>如何能以最快的速度完成</li>
+<li>又能保证上面四种操作的逻辑顺序</li>
+</ul>
+<p>mvcc Multi-Version Concurrency Control 多版本并发控制</p>
+<h1 id="SQL引擎"><a href="#SQL引擎" class="headerlink" title="SQL引擎"></a>SQL引擎</h1><p><img src="https://raw.githubusercontent.com/Gengry/blogImage/master/20180207/4.jpg" alt=""><br>现在主流的数据库都在使用CBO（基于成本的优化）进行系统的操作。</p>
+<h1 id="分布式存储"><a href="#分布式存储" class="headerlink" title="分布式存储"></a>分布式存储</h1><h2 id="多级K-V存储"><a href="#多级K-V存储" class="headerlink" title="多级K-V存储"></a>多级K-V存储</h2><p>关键特性</p>
+<ul>
+<li>可运维</li>
+<li>高性能</li>
+<li>可以比较容易的扩容</li>
+<li>核心数据结构还是hash和树，部分case针对多机做了一点优化。</li>
+</ul>
+<p>代表性组件</p>
+<ul>
+<li>mongoDB -&gt; mongos服务器</li>
+<li>Hbase -&gt; region server + client jar包</li>
+<li>DRDS(TDDL) -&gt; tddl规则引擎组件</li>
+</ul>
+<p>分布式结构可以理解成map套map的过程，先查询数据在哪个单机，再做单机查询。</p>
+<h2 id="路由"><a href="#路由" class="headerlink" title="路由"></a>路由</h2><p>规则引擎：有状态的数据应该按照什么规则进行写入和读取<br>例如：对pk % 3  —&gt; DB0,DB1,DB2</p>
+<p>本质来说还是个查找的过程  </p>
+<ul>
+<li>hash<ul>
+<li>O(1)效率</li>
+<li>不支持范围查询（按时间这样的查询条件就比较困难）</li>
+<li>不需要频繁调整数据分布</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>Tree<ul>
+<li>主要是 B Tree</li>
+<li>O(logN)效率</li>
+<li>支持范围查询</li>
+<li>需要频繁分裂和合并</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>Hash<ul>
+<li>Id%n</li>
+<li>最普通的hash</li>
+<li>如果id%3  -&gt; id%4 总共会走80%的数据发生移动，最好的情况是倍分id%3 -&gt; id%6,这时候会有50%的数据发生移动</li>
+<li>数据移动本身就是个要了亲命的事</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>hash<ul>
+<li>一致性hash  只要解决数据的扩容和缩容的问题</li>
+<li>虚拟节点<ul>
+<li>解决热点问题，只需要调整对应关系疾苦</li>
+<li>解决n-&gt;n+1问题，规则可以规定只移动需要移动的数据</li>
+<li>方案相对复杂</li>
+<li>一般推荐使用简单方案开始，使用n-&gt;2n方案扩容</li>
+<li>只有需要的情况下，在考虑平滑的扩展到虚拟节点方案。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>B-Tree<ul>
+<li>Hbase使用的切分方法<ul>
+<li>支持范围查询</li>
+<li>对于发部分场景来说，引导列都是pk.userid一类的单值查询，用树相对复杂。</li>
+<li>需要频繁的进行切分和合并操作 –region server的恶梦</li>
+<li>固定节点情况下，跨度相对较大，查询效率可能会进一步降低</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="一致性"><a href="#一致性" class="headerlink" title="一致性"></a>一致性</h2><p>寻求一种能够保证，在给定多台计算机，并且他们相互之间由网络相互连通，中间的数据没有拜占庭将军问题（数据不会被伪造）的前提下（P Partition tolerance 分区容忍性）能够做到一下两种特性的方法：</p>
+<ul>
+<li>数据的每次成功写入，数据不会丢失，并且按照写入的顺序排列 （C Consistency 一致性）</li>
+<li>给定安全级别，保证服务的可用性，并尽可能减少机器的消耗（A Availability 可用性）<ul>
+<li>数据的可用性</li>
+<li>服务的可用性 （响应时间，例如500ms）</li>
+</ul>
+</li>
+</ul>
+<h3 id="无主机方案"><a href="#无主机方案" class="headerlink" title="无主机方案"></a>无主机方案</h3><ul>
+<li>Dynamo/cassandra/Paxos:gossip ,W+R&gt;N (W&gt;N-R)  N(node) w(write) r(read)</li>
+<li>所有节点可写，不存在单点故障</li>
+<li>读数据的最新版本，需要将所有节点的数据都读出来合并一次</li>
+</ul>
+<h3 id="有主机方案（Raft）"><a href="#有主机方案（Raft）" class="headerlink" title="有主机方案（Raft）"></a>有主机方案（Raft）</h3><p>主从配置</p>
+<ul>
+<li>Mysql MongoDB Oracle+fibreChannel</li>
+<li>只有一个节点可写，切换时存在短暂leader election过程，会出现短暂不可写。</li>
+<li>数据一致性比较好控制，读最新数据只需要读主机就可以，一致性读性能较好。</li>
+</ul>
+<h3 id="实际系统需要考虑的问题"><a href="#实际系统需要考虑的问题" class="headerlink" title="实际系统需要考虑的问题"></a>实际系统需要考虑的问题</h3><ul>
+<li>有些机器负担写任务，因此读压力可能不均衡，因此必须有权重设置。</li>
+<li>单个节点挂掉的时候，TCP超时会导致业务APP的线程花费更多的时间来处理单个请求，这样会降低APP的处理能力，导致雪崩。</li>
+<li>因为突发情况，导致数据库请求书增加，数据库相应变慢，导致雪崩。</li>
+</ul>
+<h1 id="数据库实践"><a href="#数据库实践" class="headerlink" title="数据库实践"></a>数据库实践</h1><p><img src="https://raw.githubusercontent.com/Gengry/blogImage/master/20180207/5.jpg" alt="">  </p>
+<h2 id="单机优化原则"><a href="#单机优化原则" class="headerlink" title="单机优化原则"></a>单机优化原则</h2><ul>
+<li>二分查找效率&gt;全表遍历<ul>
+<li>选择合适的索引</li>
+</ul>
+</li>
+<li>内存读写&gt;SSD读写&gt;磁盘读写<ul>
+<li>将物理读（磁盘读）换成逻辑读（内存读）</li>
+</ul>
+</li>
+<li>减少锁冲突<ul>
+<li>尽可能通过业务设计，将更新变成插入，来减少加锁去锁的操作</li>
+</ul>
+</li>
+<li>减少临时表使用<ul>
+<li>减少多维度排序</li>
+</ul>
+</li>
+</ul>
+<h2 id="分布式系统优化原则"><a href="#分布式系统优化原则" class="headerlink" title="分布式系统优化原则"></a>分布式系统优化原则</h2><ul>
+<li>减少跨机网络交互<ul>
+<li>尽可能带sharding key</li>
+<li>分页优化（google一下）</li>
+</ul>
+</li>
+<li>减少数据读写热点<ul>
+<li>切分颗粒度尽可能细（用户颗粒度好于省份）</li>
+</ul>
+</li>
+<li>减少锁开销<ul>
+<li>尽可能规避分布式事物</li>
+</ul>
+</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p><a href="http://blog.sina.cn/dpool/blog/s/blog_693f08470102vibt.html" target="_blank" rel="noopener">沈询所有资源的索引（会不断更新）</a></p>
+<ul>
+<li>尽一切可能利用单机资源<ul>
+<li>单机事物</li>
+<li>单机join</li>
+</ul>
+</li>
+<li>好的存储模型<ul>
+<li>尽可能走内存</li>
+<li>尽可能将以此要查询到的数据物理的放在一起</li>
+<li>通过合理的数据冗余，减少走网络的次数</li>
+<li>合理并行提升响应时间</li>
+<li>读取数据瓶颈，可以通过加slave节点解决</li>
+<li>写入瓶颈，用规则sharding和扩容来解决</li>
+</ul>
+</li>
+</ul>
+<p><a href="https://www.cnblogs.com/cynchanpin/p/7003390.html" target="_blank" rel="noopener">警惕 InnoDB 和 MyISAM 创建 Hash 索引陷阱</a></p>
+<blockquote class="blockquote-center">今天最好的表现，是明天最低的要求。</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/事物/" rel="tag"># 事物</a>
+          
+            <a href="/tags/数据库/" rel="tag"># 数据库</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/02/08/虚拟机安装Centos，安装mysql，配置主从（三）/" rel="next" title="虚拟机安装Centos，安装mysql，配置主从（三）">
+                <i class="fa fa-chevron-left"></i> 虚拟机安装Centos，安装mysql，配置主从（三）
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/02/22/JDK并发包/" rel="prev" title="JDK并发包">
+                JDK并发包 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Geng</p>
+              <p class="site-description motion-element" itemprop="description">今天最好的表现，是明天最低的要求。</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">26</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#介绍"><span class="nav-number">1.</span> <span class="nav-text">介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Key-Value存储"><span class="nav-number">2.</span> <span class="nav-text">Key-Value存储</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#关系代数"><span class="nav-number">3.</span> <span class="nav-text">关系代数</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#二级索引"><span class="nav-number">3.1.</span> <span class="nav-text">二级索引</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#组合索引"><span class="nav-number">3.2.</span> <span class="nav-text">组合索引</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#事物简介"><span class="nav-number">4.</span> <span class="nav-text">事物简介</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#事物单元"><span class="nav-number">4.1.</span> <span class="nav-text">事物单元</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#事物产生原因"><span class="nav-number">4.2.</span> <span class="nav-text">事物产生原因</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#事物单元之间的Happen-before关系（数据的四种冲突）"><span class="nav-number">4.2.1.</span> <span class="nav-text">事物单元之间的Happen-before关系（数据的四种冲突）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#问题"><span class="nav-number">4.2.2.</span> <span class="nav-text">问题</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SQL引擎"><span class="nav-number">5.</span> <span class="nav-text">SQL引擎</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#分布式存储"><span class="nav-number">6.</span> <span class="nav-text">分布式存储</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#多级K-V存储"><span class="nav-number">6.1.</span> <span class="nav-text">多级K-V存储</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#路由"><span class="nav-number">6.2.</span> <span class="nav-text">路由</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#一致性"><span class="nav-number">6.3.</span> <span class="nav-text">一致性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#无主机方案"><span class="nav-number">6.3.1.</span> <span class="nav-text">无主机方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#有主机方案（Raft）"><span class="nav-number">6.3.2.</span> <span class="nav-text">有主机方案（Raft）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实际系统需要考虑的问题"><span class="nav-number">6.3.3.</span> <span class="nav-text">实际系统需要考虑的问题</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#数据库实践"><span class="nav-number">7.</span> <span class="nav-text">数据库实践</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#单机优化原则"><span class="nav-number">7.1.</span> <span class="nav-text">单机优化原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式系统优化原则"><span class="nav-number">7.2.</span> <span class="nav-text">分布式系统优化原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">7.3.</span> <span class="nav-text">总结</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Geng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
