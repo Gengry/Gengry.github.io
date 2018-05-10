@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="耿瑞阳的博客" type="application/atom+xml" />
+
+
+
+
+
+
+<meta name="description" content="HDFS架构体系   元数据   NameNode 是整个文件系统的管理节点。它维护着整个文件系统的文件目录树，文件/目录的元信息和每个文件对应的数据块列表。接收用户的操作请求。 文件包括： fsimage:元数据镜像文件。存储某一时段NameNode内存元数据信息。 edits:操作日志文件。   fstime:保存最近一次checkpoint的时间 以上这些文件是保存在linux的文件系统中。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HDFS学习笔记">
+<meta property="og:url" content="https://Gengry.github.io/2018/04/06/HDFS学习笔记/index.html">
+<meta property="og:site_name" content="耿瑞阳的博客">
+<meta property="og:description" content="HDFS架构体系   元数据   NameNode 是整个文件系统的管理节点。它维护着整个文件系统的文件目录树，文件/目录的元信息和每个文件对应的数据块列表。接收用户的操作请求。 文件包括： fsimage:元数据镜像文件。存储某一时段NameNode内存元数据信息。 edits:操作日志文件。   fstime:保存最近一次checkpoint的时间 以上这些文件是保存在linux的文件系统中。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/1.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/2.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/3.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/4.jpg">
+<meta property="og:updated_time" content="2018-04-06T04:41:22.844Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="HDFS学习笔记">
+<meta name="twitter:description" content="HDFS架构体系   元数据   NameNode 是整个文件系统的管理节点。它维护着整个文件系统的文件目录树，文件/目录的元信息和每个文件对应的数据块列表。接收用户的操作请求。 文件包括： fsimage:元数据镜像文件。存储某一时段NameNode内存元数据信息。 edits:操作日志文件。   fstime:保存最近一次checkpoint的时间 以上这些文件是保存在linux的文件系统中。">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/1.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://Gengry.github.io/2018/04/06/HDFS学习笔记/"/>
+
+
+
+
+
+  <title>HDFS学习笔记 | 耿瑞阳的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">耿瑞阳的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://Gengry.github.io/2018/04/06/HDFS学习笔记/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Geng">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="耿瑞阳的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">HDFS学习笔记</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-06T09:41:24+08:00">
+                2018-04-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="HDFS架构体系"><a href="#HDFS架构体系" class="headerlink" title="HDFS架构体系"></a>HDFS架构体系</h2><p><img src="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/1.jpg" alt="">  </p>
+<h3 id="元数据"><a href="#元数据" class="headerlink" title="元数据"></a>元数据</h3><p><img src="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/2.jpg" alt="">  </p>
+<h2 id="NameNode"><a href="#NameNode" class="headerlink" title="NameNode"></a>NameNode</h2><ul>
+<li>是整个文件系统的管理节点。它维护着整个文件系统的文件目录树，文件/目录的元信息和每个文件对应的数据块列表。接收用户的操作请求。</li>
+<li>文件包括：<ul>
+<li>fsimage:元数据镜像文件。存储某一时段NameNode内存元数据信息。</li>
+<li>edits:操作日志文件。</li>
+</ul>
+</li>
+<li>fstime:保存最近一次checkpoint的时间</li>
+<li>以上这些文件是保存在linux的文件系统中。<h3 id="NameNode工作特点"><a href="#NameNode工作特点" class="headerlink" title="NameNode工作特点"></a>NameNode工作特点</h3></li>
+</ul>
+<ol>
+<li>Namenode始终在内存中保存metedata，用于处理“读请求”</li>
+<li>到有“写请求”到来时，namenode会首先写editlog到磁盘，即向edits文件中写日志，成功返回后，才会修改内存，并且向客户端返回</li>
+<li>Hadoop会维护一个fsimage文件，也就是namenode中metedata的镜像，但是fsimage不会随时与namenode内存中的metedata保持一致，而是每隔一段时间通过合并edits文件来更新内容。Secondary namenode就是用来合并fsimage和edits文件来更新NameNode的metedata的。</li>
+</ol>
+<h2 id="SecondaryNameNode"><a href="#SecondaryNameNode" class="headerlink" title="SecondaryNameNode"></a>SecondaryNameNode</h2><ul>
+<li>HA的一个解决方案。但不支持热备。配置即可。</li>
+<li>执行过程：从NameNode上下载元数据信息（fsimage,edits），然后把二者合并，生成新的fsimage，在本地保存，并将其推送到NameNode，替换旧的fsimage.</li>
+<li>默认在安装在NameNode节点上，但这样…不安全！</li>
+</ul>
+<h3 id="secondary-namenode的工作流程"><a href="#secondary-namenode的工作流程" class="headerlink" title="secondary namenode的工作流程"></a>secondary namenode的工作流程</h3><ol>
+<li>secondary通知namenode切换edits文件</li>
+<li>secondary从namenode获得fsimage和edits(通过http)</li>
+<li>secondary将fsimage载入内存，然后开始合并edits</li>
+<li>secondary将新的fsimage发回给namenode</li>
+<li>namenode用新的fsimage替换旧的fsimage</li>
+</ol>
+<h2 id="DataNode"><a href="#DataNode" class="headerlink" title="DataNode"></a>DataNode</h2><ul>
+<li>提供真实文件数据的存储服务。</li>
+<li>文件块（block）：最基本的存储单位。对于文件内容而言，一个文件的长度大小是size，那么从文件的０偏移开始，按照固定的大小，顺序对文件进行划分并编号，划分好的每一个块称一个Block。HDFS默认Block大小是128MB，以一个256MB文件，共有256/128=2个Block.<br>不同于普通文件系统的是，HDFS中，如果一个文件小于一个数据块的大小，并不占用整个数据块存储空间</li>
+<li>Replication。多复本。默认是三个。 hdfs-site.xml的dfs.replication属性</li>
+</ul>
+<h2 id="HDFS"><a href="#HDFS" class="headerlink" title="HDFS"></a>HDFS</h2><h3 id="读过程"><a href="#读过程" class="headerlink" title="读过程"></a>读过程</h3><blockquote>
+<p>初始化FileSystem，然后客户端(client)用FileSystem的open()函数打开文件<br>FileSystem用RPC调用元数据节点，得到文件的数据块信息，对于每一个数据块，元数据节点返回保存数据块的数据节点的地址。<br>FileSystem返回FSDataInputStream给客户端，用来读取数据，客户端调用stream的read()函数开始读取数据。<br>DFSInputStream连接保存此文件第一个数据块的最近的数据节点，data从数据节点读到客户端(client)<br>当此数据块读取完毕时，DFSInputStream关闭和此数据节点的连接，然后连接此文件下一个数据块的最近的数据节点。<br>当客户端读取完毕数据的时候，调用FSDataInputStream的close函数。<br>在读取数据的过程中，如果客户端在与数据节点通信出现错误，则尝试连接包含此数据块的下一个数据节点。<br>失败的数据节点将被记录，以后不再连接。</p>
+</blockquote>
+<p><img src="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/3.jpg" alt="">  </p>
+<h3 id="写过程"><a href="#写过程" class="headerlink" title="写过程"></a>写过程</h3><blockquote>
+<p>初始化FileSystem，客户端调用create()来创建文件<br>FileSystem用RPC调用元数据节点，在文件系统的命名空间中创建一个新的文件，元数据节点首先确定文件原来不存在，并且客户端有创建文件的权限，然后创建新文件。<br>FileSystem返回DFSOutputStream，客户端用于写数据，客户端开始写入数据。<br>DFSOutputStream将数据分成块，写入data queue。data queue由Data Streamer读取，并通知元数据节点分配数据节点，用来存储数据块(每块默认复制3块)。分配的数据节点放在一个pipeline里。Data Streamer将数据块写入pipeline中的第一个数据节点。第一个数据节点将数据块发送给第二个数据节点。第二个数据节点将数据发送给第三个数据节点。<br>DFSOutputStream为发出去的数据块保存了ack queue，等待pipeline中的数据节点告知数据已经写入成功。<br>当客户端结束写入数据，则调用stream的close函数。此操作将所有的数据块写入pipeline中的数据节点，并等待ack queue返回成功。最后通知元数据节点写入完毕。<br>如果数据节点在写入的过程中失败，关闭pipeline，将ack queue中的数据块放入data queue的开始，当前的数据块在已经写入的数据节点中被元数据节点赋予新的标示，则错误节点重启后能够察觉其数据块是过时的，会被删除。失败的数据节点从pipeline中移除，另外的数据块则写入pipeline中的另外两个数据节点。元数据节点则被通知此数据块是复制块数不足，将来会再创建第三份备份。</p>
+</blockquote>
+<p><img src="https://raw.githubusercontent.com/Gengry/blogImage/master/20180406/4.jpg" alt="">  </p>
+<h2 id="HDFS-shell"><a href="#HDFS-shell" class="headerlink" title="HDFS shell"></a>HDFS shell</h2><figure class="highlight vim"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span>，Hadoop fs –fs [local | &lt;<span class="keyword">file</span> <span class="built_in">system</span> URI&gt;]：声明hadoop使用的文件系统，如果不声明的话，使用当前配置文件配置的，按如下顺序查找：hadoop jar里的hadoop-default.xml-&gt;$HADOOP_CONF_DIR下的hadoop-default.xml-&gt;$HADOOP_CONF_DIR下的hadoop-site.xml。使用local代表将本地文件系统作为hadoop的DFS。如果传递uri做参数，那么就是特定的文件系统作为DFS。</span><br><span class="line"></span><br><span class="line"><span class="number">2</span>，hadoop fs –<span class="keyword">ls</span> <span class="symbol">&lt;path&gt;</span>：等同于本地系统的<span class="keyword">ls</span>，列出在指定目录下的文件内容，支持pattern匹配。输出格式如filename(full path)   &lt;r n&gt;  size.其中n代表replica的个数，size代表大小（单位bytes）。</span><br><span class="line"></span><br><span class="line"><span class="number">3</span>，hadoop fs –lsr <span class="symbol">&lt;path&gt;</span>：递归列出匹配pattern的文件信息，类似<span class="keyword">ls</span>，只不过递归列出所有子目录信息。</span><br><span class="line"></span><br><span class="line"><span class="number">4</span>，hadoop fs –du <span class="symbol">&lt;path&gt;</span>：列出匹配pattern的指定的文件系统空间总量（单位bytes），等价于unix下的针对目录的du –<span class="keyword">sb</span> <span class="symbol">&lt;path&gt;</span>/*和针对文件的du –<span class="keyword">b</span> <span class="symbol">&lt;path&gt;</span> ，输出格式如name(full path)  size(in bytes)。</span><br><span class="line"></span><br><span class="line"><span class="number">5</span>，hadoop fs –dus <span class="symbol">&lt;path&gt;</span>：等价于-du，输出格式也相同，只不过等价于unix的du -<span class="keyword">sb</span>。</span><br><span class="line"></span><br><span class="line"><span class="number">6</span>，hadoop fs –mv <span class="symbol">&lt;src&gt;</span> <span class="symbol">&lt;dst&gt;</span>：将制定格式的文件 <span class="keyword">move</span>到指定的目标位置。当src为多个文件时，dst必须是个目录。</span><br><span class="line"></span><br><span class="line"><span class="number">7</span>，hadoop fs –<span class="keyword">cp</span> <span class="symbol">&lt;src&gt;</span> <span class="symbol">&lt;dst&gt;</span>：拷贝文件到目标位置，当src为多个文件时，dst必须是个目录。</span><br><span class="line"></span><br><span class="line"><span class="number">8</span>，hadoop fs –rm [-skipTrash] <span class="symbol">&lt;src&gt;</span>：删除匹配pattern的指定文件，等价于unix下的rm <span class="symbol">&lt;src&gt;</span>。</span><br><span class="line"></span><br><span class="line"><span class="number">9</span>，hadoop fs –rmr [skipTrash] <span class="symbol">&lt;src&gt;</span>：递归删掉所有的文件和目录，等价于unix下的rm –rf <span class="symbol">&lt;src&gt;</span>。</span><br><span class="line"></span><br><span class="line"><span class="number">10</span>，hadoop fs –rmi [skipTrash] <span class="symbol">&lt;src&gt;</span>：等价于unix的rm –rfi <span class="symbol">&lt;src&gt;</span>。</span><br><span class="line"></span><br><span class="line"><span class="number">11</span>，hadoop fs –<span class="keyword">put</span> <span class="symbol">&lt;localsrc&gt;</span> … <span class="symbol">&lt;dst&gt;</span>：从本地系统拷贝文件到DFS。</span><br><span class="line"></span><br><span class="line"><span class="number">12</span>，hadoop fs –copyFromLocal <span class="symbol">&lt;localsrc&gt;</span> … <span class="symbol">&lt;dst&gt;</span>：等价于-<span class="keyword">put</span>。</span><br><span class="line"></span><br><span class="line"><span class="number">13</span>，hadoop fs –moveFromLocal <span class="symbol">&lt;localsrc&gt;</span> … <span class="symbol">&lt;dst&gt;</span>：等同于-<span class="keyword">put</span>，只不过源文件在拷贝后被删除。</span><br><span class="line"></span><br><span class="line"><span class="number">14</span>，hadoop fs –<span class="built_in">get</span> [-ignoreCrc] [-crc] <span class="symbol">&lt;src&gt;</span> <span class="symbol">&lt;localdst&gt;</span>：从DFS拷贝文件到本地文件系统，文件匹配pattern，若是多个文件，则dst必须是目录。</span><br><span class="line"></span><br><span class="line"><span class="number">15</span>，hadoop fs –getmerge <span class="symbol">&lt;src&gt;</span> <span class="symbol">&lt;localdst&gt;</span>：顾名思义，从DFS拷贝多个文件、合并排序为一个文件到本地文件系统。</span><br><span class="line"></span><br><span class="line"><span class="number">16</span>，hadoop fs –<span class="keyword">cat</span> <span class="symbol">&lt;src&gt;</span>：展示文件内容。</span><br><span class="line"></span><br><span class="line"><span class="number">17</span>，hadoop fs –copyToLocal [-ignoreCrc] [-crc] <span class="symbol">&lt;src&gt;</span> <span class="symbol">&lt;localdst&gt;</span>：等价于-<span class="built_in">get</span>。</span><br><span class="line"></span><br><span class="line"><span class="number">18</span>，hadoop fs –<span class="built_in">mkdir</span> <span class="symbol">&lt;path&gt;</span>：在指定位置创建目录。</span><br><span class="line"></span><br><span class="line"><span class="number">19</span>，hadoop fs –setrep [-R] [-<span class="keyword">w</span>] <span class="symbol">&lt;rep&gt;</span> &lt;path/<span class="keyword">file</span>&gt;：设置文件的备份级别，-R标志控制是否递归设置子目录及文件。</span><br><span class="line"></span><br><span class="line"><span class="number">20</span>，hadoop fs –chmod [-R] &lt;MODE[,MODE]…|OCTALMODE&gt; PATH…：修改文件的权限，-R标记递归修改。MODE为<span class="keyword">a</span>+r,g-<span class="keyword">w</span>,+rwx等，OCTALMODE为<span class="number">755</span>这样。</span><br><span class="line"></span><br><span class="line"><span class="number">21</span>，hadoop fs -chown [-R] [OWNER][:[GROUP]] PATH…：修改文件的所有者和组。-R表示递归。</span><br><span class="line"></span><br><span class="line"><span class="number">22</span>，hadoop fs -chgrp [-R] GROUP PATH…：等价于-chown … :GROUP …。</span><br><span class="line"></span><br><span class="line"><span class="number">23</span>，hadoop fs –<span class="built_in">count</span>[-q] <span class="symbol">&lt;path&gt;</span>：计数文件个数及所占空间的详情，输出表格的列的含义依次为：DIR_COUNT,FILE_COUNT,CONTENT_SIZE,FILE_NAME或者如果加了-q的话，还会列出QUOTA,REMAINING_QUOTA,SPACE_QUOTA,REMAINING_SPACE_QUOTA。</span><br></pre></td></tr></table></figure>
+<blockquote class="blockquote-center">今天最好的表现，是明天最低的要求。</blockquote>
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/04/05/安装单机hadoop-linux虚拟机配置/" rel="next" title="安装单机hadoop-linux虚拟机配置">
+                <i class="fa fa-chevron-left"></i> 安装单机hadoop-linux虚拟机配置
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/04/06/MapReduce笔记/" rel="prev" title="MapReduce笔记">
+                MapReduce笔记 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Geng</p>
+              <p class="site-description motion-element" itemprop="description">今天最好的表现，是明天最低的要求。</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">30</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#HDFS架构体系"><span class="nav-number">1.</span> <span class="nav-text">HDFS架构体系</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#元数据"><span class="nav-number">1.1.</span> <span class="nav-text">元数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#NameNode"><span class="nav-number">2.</span> <span class="nav-text">NameNode</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#NameNode工作特点"><span class="nav-number">2.1.</span> <span class="nav-text">NameNode工作特点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SecondaryNameNode"><span class="nav-number">3.</span> <span class="nav-text">SecondaryNameNode</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#secondary-namenode的工作流程"><span class="nav-number">3.1.</span> <span class="nav-text">secondary namenode的工作流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#DataNode"><span class="nav-number">4.</span> <span class="nav-text">DataNode</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HDFS"><span class="nav-number">5.</span> <span class="nav-text">HDFS</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#读过程"><span class="nav-number">5.1.</span> <span class="nav-text">读过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#写过程"><span class="nav-number">5.2.</span> <span class="nav-text">写过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HDFS-shell"><span class="nav-number">6.</span> <span class="nav-text">HDFS shell</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Geng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
